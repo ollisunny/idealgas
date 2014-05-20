@@ -1,0 +1,410 @@
+#include "stdafx.h"
+
+extern GLfloat MULT;
+extern int QUAN;
+extern  Camera Cam;
+extern Container *C;
+
+
+Atom::Atom (GLfloat X, GLfloat Y, GLfloat Z, GLfloat R, GLfloat T){
+	x = X;
+	y = Y;
+	z = Z;
+	r = R;
+	t = sqrt(T);
+	vx = RandomFloat (-0.01*t, 0.01*t) ;
+	vy = RandomFloat (-0.01*t, 0.01*t) ;
+	//(0.005 - (GLfloat)ty/((GLfloat)UINT_MAX*100))*4;
+	vz = RandomFloat (-0.01*t, 0.01*t) ;
+}
+
+Container::Container(GLfloat W, GLfloat H, GLfloat L, GLfloat R, GLfloat T){
+	l = L;
+	w = W;
+	h = H;
+
+	gas = new Atom*[QUAN];
+	for (int i = 0; i < QUAN; i++)
+     {float atom_w = RandomFloat(-2*w, 2*w);
+	  float atom_h = RandomFloat(-2*h, 2*h);
+	  float atom_l = RandomFloat(-2*l, 2*l);
+      gas[i] = new Atom(atom_w, atom_h, atom_l, R, T);
+    }
+
+}
+
+GLint Container::NoIntersections (Atom *A, Atom *B)
+ {
+     GLfloat rasst = sqrt ((A -> GetX() - B -> GetX())*(A -> GetX() - B -> GetX()) + (A -> GetY() - B -> GetY())*(A -> GetY() - B -> GetY()) + (A -> GetZ() - B -> GetZ())*(A -> GetZ() - B -> GetZ()));
+     GLfloat r = A -> GetR();
+      if (rasst < 2*r)
+        {return 1;}
+       else
+        {return 2;}
+}
+
+float Container::RandomFloat (float _min, float _max )
+{ float random;
+  //srand (time(NULL));
+  random = (float)(rand())/RAND_MAX;
+  float range = _max-_min;
+  return (random*range)+_min;
+}
+
+float Atom::RandomFloat (float _min, float _max )
+{ float random;
+  //srand (time(NULL));
+  random = (float)(rand())/RAND_MAX;
+  float range = _max-_min;
+  return (random*range)+_min;
+}
+
+void Atom::Move(){
+	x += vx;
+	y += vy;
+	z += vz;
+}
+
+GLfloat Atom::GetX(){
+	return x;
+}
+
+GLfloat Atom::GetY(){
+	return y;
+}
+
+GLfloat Atom::GetZ(){
+	return z;
+}
+
+GLfloat Atom::GetNX(){
+	return x + vx;
+}
+
+ GLfloat Atom::GetNY(){
+	return y + vy;
+}
+
+GLfloat Atom::GetNZ(){
+	return z + vz;
+}
+
+GLfloat Atom::GetR(){
+	return r;
+}
+
+GLfloat Atom::GetT(){
+	return sqrt(t);
+}
+GLfloat Atom::GetSpeed(){
+	return sqrt(vx*vx + vy*vy + vz*vz);
+}
+
+GLfloat Atom::GetSpeedProj(GLfloat X, GLfloat Y, GLfloat Z){ //Проекция скорости на прямую, соединяющую центр и точку (X, Y, Z)
+	return ((X - x)*vx + (Y - y)*vy + (Z - z)*vz)/sqrt((X - x)*(X - x) + (Y - y)*(Y - y) + (Z - z)*(Z - z));
+}
+
+void Atom::Hit(GLfloat _x, GLfloat _y, GLfloat _z, GLfloat Vf, GLfloat Vs){
+	GLfloat X = _x - x;
+	GLfloat Y = _y - y;
+	GLfloat Z = _z - z;
+	GLfloat R = sqrt (X*X + Y*Y + Z*Z);
+
+//	GLfloat Vs = this -> GetSpeedProj(_x, _y, _z);
+//	GLfloat Vf = _sp;
+
+	vx = vx - (Vs + Vf )*(X/R);
+	vy = vy - (Vs + Vf )*(Y/R);
+	vz = vz - (Vs + Vf )*(Z/R);
+}
+std::string doubleToString(double d)
+{
+std::ostringstream ss;
+ss << d;
+return ss.str();
+}
+void Container::typeData(double data)
+{
+   int len, i;
+   std::string stringResult;
+   stringResult = doubleToString(data);
+   len = stringResult.size();
+   for (i = 0; i < len; i++) {
+   glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, stringResult[i]);}
+}
+void typeText(std::string s)
+{
+   int len, i;
+   len = s.size();
+   for (i = 0; i < len; i++) {
+   glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, s[i]);
+}
+
+}
+void Container::DrawCube(){
+	static GLfloat oldx = 0, oldy = 0;
+
+	glViewport(0, 0, (GLsizei) x*.75, (GLsizei) y*.75);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+//	glFrustum(-1., 1., -1., 1., 1.5, 20.);
+	gluPerspective(60., (GLfloat) 4/3, 1, 60.);
+	glScalef (1., (GLfloat) x/(GLfloat) y, 1);
+//	glOrtho (-4., 4., -4., 4., 3., 20.);
+	glMatrixMode(GL_MODELVIEW);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+	glTranslatef(0., 0., -Cam.GetZ());
+//	std::cout << oldx << ' ' << oldy << '\n';
+	glRotatef(Cam.GetX(), 0., 1., 0.);
+	glRotatef(Cam.GetY(), 1., 0., 0.);
+	oldx = Cam.GetX();
+	oldy = Cam.GetY();
+	//gluLookAt(4., 4., 7., -.0, -.0, -.5, .0, 1.0, .0);
+	glScalef(w, h, l);
+	GLfloat matemis[] = {.7, .7, .7, .0};
+	GLfloat sp[] = {1., 1., 1., 1.};
+	glMaterialfv(GL_FRONT, GL_SPECULAR, sp);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, sp);
+	glMaterialfv(GL_FRONT, GL_EMISSION, matemis);
+	glutWireCube(MULT);
+	glScalef(1/w, 1/h, 1/l);
+	matemis[0] = .0;
+	matemis[1] = .0;
+	matemis[2] = .0;
+	glMaterialfv(GL_FRONT, GL_EMISSION, matemis);
+	for (int i = 0; i < QUAN; i++){
+		glPushMatrix();
+		glTranslatef(gas[i] -> GetX(), gas[i]-> GetY(), gas[i] -> GetZ());
+		sp[2] = 0.;
+		sp[0] = gas[i] -> GetSpeed()/((gas[i] -> GetT())*0.01);
+		sp[1] = 1-gas[i] -> GetSpeed()/((gas[i] -> GetT())*0.01);
+		sp[3] = 1.;
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, sp);
+		sp[0] = .5;
+		sp[1] = .5;
+		sp[2] = .5;
+		sp[3] = 1.;
+		glMaterialfv(GL_FRONT, GL_SPECULAR, sp);
+		glutSolidSphere(gas[i] -> GetR(), 45, 35);
+		glPopMatrix();
+	}
+    glViewport(x*.75, 0, (GLsizei) x*.25, (GLsizei) y*.75); //таблица
+    glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(-x*.125, x*.125, -y*.375, C -> y*.375);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	matemis[0] = .7;
+	matemis[1] = .7;
+	matemis[2] = .7;
+	glMaterialfv(GL_FRONT, GL_EMISSION, matemis);
+	glBegin(GL_LINES);
+    glVertex2i(-x*.125, -y*.375);//провели линию
+    glVertex2i(-x*.125, y*.375);
+    glEnd();
+    glColor3f( 0, 0.5, 0 );
+    glRasterPos2f(-x*.125+50, y*.375-20);
+    typeText("width = ");
+    typeData(w);
+    glRasterPos2f(-x*.125+50, y*.375-60);
+    typeText("length = ");
+    typeData(l);
+    glRasterPos2f(-x*.125+50, y*.375-100);
+    typeText("height = ");
+    typeData(h);
+    glRasterPos2f(-x*.125+50, y*.375-140);
+    typeText("number of atoms = ");
+    typeData(QUAN);
+    glRasterPos2f(-x*.125+50, y*.375-180);
+    typeText("Temperature = ");
+    typeData(t);
+
+
+}
+
+
+
+void Container::DrawGraph(){
+	glViewport(0, (GLsizei) y*.75, (GLsizei) x, (GLsizei) y*.25);
+	//std::cout << C -> GetY() << '\n';
+	//glViewport(0, 0, (GLsizei) C -> GetX(), (GLsizei) C -> GetY()*.75);
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(-x*.5, x*.5, -y*.125, C -> y*.125);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	GLfloat matemis[] = {.7, .7, .7, .0};
+
+	glMaterialfv(GL_FRONT, GL_EMISSION, matemis);
+
+	glBegin(GL_LINES);
+		glVertex2i(-x*.5, -y*.125);
+		glVertex2i(x*.5, -y*.125);
+	glEnd();
+
+	glBegin(GL_LINE_STRIP);
+		glVertex2i(-x*.25, y*.125 - 20);
+		glVertex2i(-x*.25, -y*.125 + 20);
+		glVertex2i(x*.25, -y*.125 + 20);
+	glEnd();
+
+	glBegin(GL_TRIANGLES);
+		glVertex2i(-x*.25 - 5, y*.125 - 29);
+		glVertex2i(-x*.25, y*.125 - 20);
+		glVertex2i(-x*.25 + 5, y*.125 - 29);
+	glEnd();
+
+	glBegin(GL_TRIANGLES);
+		glVertex2i(x*.25 - 9, -y*.125 + 15);
+		glVertex2i(x*.25, -y*.125 + 20);
+		glVertex2i(x*.25 - 9, -y*.125 + 25);
+	glEnd();
+
+	matemis[0] = 0.;
+	matemis[1] = 0.;
+	matemis[2] = 1.;
+	glMaterialfv(GL_FRONT, GL_EMISSION, matemis);
+
+	glBegin(GL_POINTS);
+		for (GLfloat vv = 0; vv < x*.5/4*1000/x; vv += .05)
+			glVertex2f(vv*4*x/1000-x*.25, vv*vv*exp(-vv*vv*.001)*0.35*y/1000 - y*.125 + 20);
+	glEnd();
+
+	matemis[0] = 0.;
+	matemis[1] = 1.;
+	matemis[2] = 0.;
+	glMaterialfv(GL_FRONT, GL_EMISSION, matemis);
+
+	int n = 0, n1 = 0, n2 = 0, n3 = 0;
+	glBegin(GL_LINES);
+		for (GLfloat vv = 0, dv = .001; vv < .05; vv += dv, n = 0){
+			for (int i = 0; i < QUAN; i++)
+				if (gas[i] -> GetSpeed() >= vv && gas[i] -> GetSpeed() < vv + dv)
+					n++;
+
+			if (vv >= dv){
+				glVertex2f(25*x/2.9*(vv - dv) - x*.25, (GLfloat)(n+n1+n2+n3)/4*10.5*200/QUAN*0.001/dv*y/850 - y*.125 + 22);
+				glVertex2f(25*x/2.9*(vv) - x*.25, (GLfloat)(n+n1+n2+n3)/4*10.5*200/QUAN*0.001/dv*y/850 - y*.125 + 22);
+			}
+			n3 = n2;
+			n2 = n1;
+			n1 = n;
+		}
+	glEnd();
+
+
+
+//	double E = 0.;
+//	for (int i = 0; i < QUAN; i++)
+//		E += gas[i] -> GetSpeed() * gas[i] -> GetSpeed();
+//	std::cout << E << '\n';
+}
+
+void Container::Draw(){
+	DrawCube();
+	DrawGraph();
+	glutSwapBuffers();
+}
+
+GLfloat GetDist(Atom *A, Atom *B){
+	GLfloat d = sqrt ((A -> GetNX() - B -> GetNX())*(A -> GetNX() - B -> GetNX()) + (A -> GetNY() - B -> GetNY())*(A -> GetNY() - B -> GetNY()) + (A -> GetNZ() - B -> GetNZ())*(A -> GetNZ() - B -> GetNZ()));
+	return d;
+}
+
+void Container::Next(){
+	Move();
+	glutPostRedisplay();
+}
+
+void Container::Move(){
+	for (int i = 0; i < QUAN; i++){
+		for (int j = i + 1; j < QUAN; j++)
+			if (GetDist (gas[i], gas[j]) < (gas[i] -> GetR())*2){
+				GLfloat Vj = gas[j] -> GetSpeedProj(gas[i] -> GetX(), gas[i] -> GetY(), gas[i] -> GetZ());
+				GLfloat Vi = gas[i] -> GetSpeedProj(gas[j] -> GetX(), gas[j] -> GetY(), gas[j] -> GetZ());
+			//	std::cout << GetDist (gas[i], gas[j]) << '\n';
+			//	std::cout << Vi << ' ' << Vj << '\n';
+				gas[i] -> Hit(gas[j] -> GetX(), gas[j] -> GetY(), gas[j] -> GetZ(), Vj, Vi);
+				gas[j] -> Hit(gas[i] -> GetX(), gas[i] -> GetY(), gas[i] -> GetZ(), Vi, Vj);
+			//	std::cout << gas[i] -> GetSpeedProj(gas[j] -> GetX(), gas[j] -> GetY(), gas[j] -> GetZ()) << ' ';
+			//	std::cout << gas[j] -> GetSpeedProj(gas[i] -> GetX(), gas[i] -> GetY(), gas[i] -> GetZ()) << "\n";
+			//	std::cout << "HIT! " << i << ' ' << j << "\n\n\n";
+			}
+		if (gas[i] -> GetNX() <= -w*MULT/2 + gas[i] -> GetR() || gas[i] -> GetNX() >= w*MULT/2 - gas[i] -> GetR())
+			gas[i] -> HitWall(1);
+		if (gas[i] -> GetNY() <= -h*MULT/2 + gas[i] -> GetR() || gas[i] -> GetNY() >= h*MULT/2 - gas[i] -> GetR())
+			gas[i] -> HitWall(2);
+		if (gas[i] -> GetNZ() <= -l*MULT/2 + gas[i] -> GetR() || gas[i] -> GetNZ() >= l*MULT/2 - gas[i] -> GetR())
+			gas[i] -> HitWall(3);
+	}
+	for (int i = 0; i < QUAN; i++)
+		gas[i] -> Move();
+}
+
+void Atom::HitWall(int i){
+	if (i == 1)
+		vx = -vx;
+	if (i == 2)
+		vy = -vy;
+	if (i == 3)
+		vz = -vz;
+}
+
+Camera::Camera(){
+	x = 0;
+	y = 0;
+	z = 1000;
+}
+
+GLfloat Camera::GetX(){
+	return (x*360/800);
+}
+
+GLfloat Camera::GetY(){
+	return (y*360/800);
+}
+
+void Camera::Rotate(GLint X, GLint Y, GLint Z){
+	x += X%800;
+	y += Y%800;
+	z += Z;
+	if (z < 0)
+		z = -z;
+}
+
+GLfloat Camera::GetZ(){
+	return z*9/800;
+}
+
+void Camera::Passive(GLint X, GLint Y){
+	oldx = X;
+	oldy = Y;
+}
+
+GLfloat Camera::GetOldX(){
+	return oldx;
+}
+
+GLfloat Camera::GetOldY(){
+	return oldy;
+}
+
+void Container::SetY(GLint Y){
+	y = Y;
+}
+
+void Container::SetX(GLint X){
+	x = X;
+}
+
+GLint Container::GetX(){
+	return x;
+}
+
+ GLint Container::GetY(){
+	return y;
+}
