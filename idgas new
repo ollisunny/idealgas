@@ -1,0 +1,133 @@
+#include "stdafx.h"
+
+int QUAN;
+GLfloat MULT = 4.5;
+int key;
+
+Container *C;
+Camera Cam;
+
+
+void maininit()
+{
+    std::cout << "test";
+    clock_t time_start = clock();
+    clock_t time_end = clock();
+
+   	std::cout << "Enter the number of atoms: ";
+	std::cin >> QUAN;
+	std::cout << "Use default dimensions? (y/n)  ";
+	char d;
+	std::cin >> d;
+	if (d == 'y'){
+        if (4*3.14*QUAN*0.09*0.09*0.09/3 > 1)
+        {
+            std::cout<<"\nError, try entering less atoms or smaller radius...\n";
+            maininit();
+        }
+        else {
+		C = new Container(1., 1., 1., .09, 10.);}
+	}
+	else if (d == 'n'){
+		GLfloat w, h, l, r, t;
+		std::cout << "Enter temperature: ";
+		std::cin >> t;
+		std::cout << "Enter width: ";
+		std::cin >> w;
+		std::cout << "Enter height: ";
+		std::cin >> h;
+		std::cout << "Enter length: ";
+		std::cin >> l;
+		std::cout << "Enter radius: ";
+		std::cin >> r;
+		float mol_vol = 4*QUAN*r*r*r/3;
+		float cube_vol = (w*h)*l;
+		if (3.14*mol_vol > cube_vol)
+        {
+            std::cout<<"\nError, try entering less atoms or smaller radius...\n";
+            maininit ();
+        }
+        else {
+		C = new Container(w, h, l, 5*r, t);
+       }
+	} else {
+		std::cout << "Error, try again...\n\n";
+		maininit();
+	}
+}
+
+void init(){
+	GLfloat msp[] = {1., 1., 1., 1.};
+	GLfloat msh[] = {50.};
+	GLfloat lp[] = {0., 0., 3., 1.0};
+	GLfloat wl[] = {1., 1., 1., 1.};
+	GLfloat lma[] = {.1, .1, .1, 1.};
+	glClearColor(.0, .0, .0, .0);
+	glShadeModel(GL_FLAT);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, msp);
+	glMaterialfv(GL_FRONT, GL_SHININESS, msh);
+	glLightfv(GL_LIGHT0, GL_POSITION, lp);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, wl);
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lma);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
+	glLineWidth (1.0);
+}
+
+ void display(){
+	C -> Draw();
+}
+
+ void idle(){
+	C -> Next();
+}
+
+void reshape(int w, int h){
+	C -> SetY(h);
+	C -> SetX(w);
+}
+
+void mouse(int button, int state, int x, int y){
+	key = glutGetModifiers();
+}
+
+void mouseActive(GLint x, GLint y){
+	if (key == GLUT_ACTIVE_SHIFT)
+		Cam.Rotate(0., 0., Cam.GetOldY() - y);
+	else
+		Cam.Rotate(x - Cam.GetOldX(), y - Cam.GetOldY(), 0.);
+
+	Cam.Passive(x, y);
+//	gluLookAt(0., 4., 7., -.0, -.0, -.5, .0, 1.0, .0);
+}
+
+void mousePassive(int x, int y){
+	Cam.Passive(x, y);
+}
+
+int main(int argc, char ** argv){
+	maininit();
+
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+	glutInitWindowSize(1000, 850);
+	glutCreateWindow("Gas");
+	init();
+
+	glutDisplayFunc(display);
+	glutReshapeFunc(reshape);
+	glutMotionFunc(mouseActive);
+	glutMouseFunc(mouse);
+	glutPassiveMotionFunc(mousePassive);
+	glutIdleFunc(idle);
+	glutMainLoop();
+	return 0;
+}
+
+
